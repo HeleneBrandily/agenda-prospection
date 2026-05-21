@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda Prospection</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap');
+  :root {
+    --bg: #F7F4EF; --surface: #FFFFFF; --ink: #1A1714; --ink-soft: #6B6560;
+    --accent: #C4421A; --accent-soft: #F5E8E3; --border: #E8E3DC;
+    --green: #2D6A4F; --green-soft: #E8F4EF; --blue: #1B4F8A;
+    --blue-soft: #E8F0FA; --yellow: #B8860B; --yellow-soft: #FDF8E8;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; }
+
+  #token-screen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:2rem; }
+  .token-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:3rem; max-width:480px; width:100%; text-align:center; }
+  .token-card h1 { font-family:'DM Serif Display',serif; font-size:2rem; margin-bottom:0.5rem; }
+  .token-card p { color:var(--ink-soft); font-size:0.9rem; margin-bottom:2rem; line-height:1.6; }
+  .token-input { width:100%; padding:0.875rem 1rem; border:1.5px solid var(--border); border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.875rem; color:var(--ink); background:var(--bg); outline:none; transition:border-color 0.2s; margin-bottom:1rem; }
+  .token-input:focus { border-color:var(--accent); }
+  .btn-primary { width:100%; padding:0.875rem; background:var(--accent); color:white; border:none; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:500; cursor:pointer; transition:opacity 0.2s; }
+  .btn-primary:hover { opacity:0.88; }
+  .security-note { margin-top:1.5rem; padding:0.875rem; background:var(--accent-soft); border-radius:8px; font-size:0.8rem; color:var(--accent); line-height:1.5; }
+
+  #app { display:none; }
+  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:1.25rem 2rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:10; }
+  .header-left h1 { font-family:'DM Serif Display',serif; font-size:1.4rem; }
+  .header-left .date-label { font-size:0.8rem; color:var(--ink-soft); margin-top:0.2rem; text-transform:uppercase; letter-spacing:0.08em; }
+  .header-right { display:flex; align-items:center; gap:0.75rem; }
+  .day-badge { padding:0.375rem 0.875rem; border-radius:100px; font-size:0.8rem; font-weight:500; background:var(--accent-soft); color:var(--accent); }
+  .btn-refresh { padding:0.5rem 1rem; border:1.5px solid var(--border); border-radius:8px; background:transparent; font-family:'DM Sans',sans-serif; font-size:0.8rem; cursor:pointer; color:var(--ink-soft); transition:all 0.2s; }
+  .btn-refresh:hover { border-color:var(--ink); color:var(--ink); }
+  .btn-logout { padding:0.5rem 1rem; border:none; background:transparent; font-family:'DM Sans',sans-serif; font-size:0.8rem; cursor:pointer; color:var(--ink-soft); }
+  .main { max-width:960px; margin:0 auto; padding:2rem; }
+
+  .loading { text-align:center; padding:4rem 2rem; color:var(--ink-soft); }
+  .loading-spinner { width:32px; height:32px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 1rem; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .all-done { text-align:center; padding:4rem 2rem; background:var(--surface); border-radius:16px; border:1px solid var(--border); }
+  .all-done .icon { font-size:3rem; margin-bottom:1rem; }
+  .all-done h2 { font-family:'DM Serif Display',serif; font-size:1.75rem; margin-bottom:0.5rem; }
+  .all-done p { color:var(--ink-soft); font-size:0.9rem; }
+
+  .section { margin-bottom:2rem; opacity:0; transform:translateY(16px); animation:fadeUp 0.4s ease forwards; }
+  @keyframes fadeUp { to { opacity:1; transform:translateY(0); } }
+  .section:nth-child(1){animation-delay:0.05s} .section:nth-child(2){animation-delay:0.1s}
+  .section:nth-child(3){animation-delay:0.15s} .section:nth-child(4){animation-delay:0.2s}
+  .section:nth-child(5){animation-delay:0.25s}
+
+  .section-header { display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem; }
+  .section-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+  .section-title { font-family:'DM Serif Display',serif; font-size:1.1rem; }
+  .section-count { margin-left:auto; font-size:0.75rem; color:var(--ink-soft); background:var(--bg); border:1px solid var(--border); padding:0.2rem 0.6rem; border-radius:100px; }
+
+  .profile-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.25rem 1.5rem; margin-bottom:0.75rem; transition:box-shadow 0.2s,transform 0.2s; }
+  .profile-card:hover { box-shadow:0 4px 20px rgba(0,0,0,0.07); transform:translateY(-1px); }
+  .profile-top { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:0.75rem; }
+  .profile-name { font-weight:500; font-size:1rem; line-height:1.3; }
+  .profile-meta { display:flex; align-items:center; gap:0.5rem; margin-top:0.25rem; flex-wrap:wrap; }
+  .badge { padding:0.2rem 0.6rem; border-radius:100px; font-size:0.72rem; font-weight:500; white-space:nowrap; }
+  .badge-red { background:#FEE2E2; color:#B91C1C; }
+  .badge-orange { background:#FEF3C7; color:#92400E; }
+  .badge-yellow { background:var(--yellow-soft); color:var(--yellow); }
+  .badge-gray { background:#F3F4F6; color:#6B7280; }
+  .score-badge { font-size:0.75rem; color:var(--ink-soft); background:var(--bg); border:1px solid var(--border); padding:0.2rem 0.6rem; border-radius:100px; }
+  .btn-linkedin { display:inline-flex; align-items:center; gap:0.4rem; padding:0.5rem 1rem; background:#0A66C2; color:white; border-radius:8px; text-decoration:none; font-size:0.8rem; font-weight:500; white-space:nowrap; flex-shrink:0; transition:opacity 0.2s; }
+  .btn-linkedin:hover { opacity:0.85; }
+  .profile-notes { font-size:0.82rem; color:var(--ink-soft); line-height:1.6; border-top:1px solid var(--border); padding-top:0.75rem; }
+  .dm-block { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:1rem; margin-top:0.75rem; font-size:0.82rem; line-height:1.7; color:var(--ink); white-space:pre-wrap; position:relative; }
+  .dm-label { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); margin-bottom:0.5rem; font-weight:500; }
+  .btn-copy { position:absolute; top:0.75rem; right:0.75rem; padding:0.35rem 0.75rem; border:1px solid var(--border); border-radius:6px; background:var(--surface); font-size:0.72rem; cursor:pointer; color:var(--ink-soft); font-family:'DM Sans',sans-serif; transition:all 0.2s; }
+  .btn-copy:hover { background:var(--ink); color:white; border-color:var(--ink); }
+  .btn-copy.copied { background:var(--green); color:white; border-color:var(--green); }
+
+  .routine-block { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.25rem 1.5rem; margin-bottom:2rem; }
+  .routine-day { font-family:'DM Serif Display',serif; font-size:1rem; margin-bottom:0.75rem; color:var(--accent); }
+  .routine-items { display:flex; flex-direction:column; gap:0.4rem; }
+  .routine-item { display:flex; align-items:flex-start; gap:0.6rem; font-size:0.85rem; color:var(--ink-soft); line-height:1.5; }
+  .routine-item::before { content:'→'; color:var(--accent); flex-shrink:0; margin-top:0.1rem; }
+  .error-block { background:#FEE2E2; border:1px solid #FECACA; border-radius:12px; padding:1.25rem 1.5rem; color:#B91C1C; font-size:0.875rem; margin-bottom:1rem; }
+</style>
+</head>
+<body>
+
+<div id="token-screen">
+  <div class="token-card">
+    <h1>Agenda Prospection</h1>
+    <p>Entre ton token Notion pour voir tes taches du jour. Il est stocke uniquement dans ton navigateur.</p>
+    <input type="password" id="token-input" class="token-input" placeholder="secret_ ou ntn_..." autocomplete="off" />
+    <button class="btn-primary" onclick="connect()">Acceder a mon agenda</button>
+    <div class="security-note">
+      Ton token reste dans ta session navigateur. Il n'est jamais envoye a un tiers.
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="header">
+    <div class="header-left">
+      <h1>Agenda Prospection</h1>
+      <div class="date-label" id="date-label"></div>
+    </div>
+    <div class="header-right">
+      <span class="day-badge" id="day-badge"></span>
+      <button class="btn-refresh" onclick="loadData()">Actualiser</button>
+      <button class="btn-logout" onclick="logout()">Deconnexion</button>
+    </div>
+  </div>
+  <div class="main">
+    <div id="content">
+      <div class="loading"><div class="loading-spinner"></div><p>Chargement...</p></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var DB_ID = '9f187aecec7144679b9a3b2e94f51d75';
+var PROXY = 'https://corsproxy.io/?url=';
+var DAYS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+var MONTHS = ['janvier','fevrier','mars','avril','mai','juin','juillet','aout','septembre','octobre','novembre','decembre'];
+
+function todayStr() {
+  var d = new Date();
+  var m = String(d.getMonth()+1).padStart(2,'0');
+  var day = String(d.getDate()).padStart(2,'0');
+  return d.getFullYear()+'-'+m+'-'+day;
+}
+
+function formatDate(d) {
+  return DAYS[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()]+' '+d.getFullYear();
+}
+
+function getRoutine(dayNum) {
+  var r = {
+    1: ['Sourcer 15-20 profils (requetes LinkedIn + Google)','Ajouter les profils retenus au Tracker','Mettre a jour le Log hebdomadaire','Verifier les relances du jour ci-dessous'],
+    2: ['Envoyer les screenshots a qualifier a Claude','Mettre a jour le Tracker avec scores et priorites','Fixer les dates pour les profils prioritaires','Verifier les relances du jour ci-dessous'],
+    3: ['Commenter 2-3 posts de facon substantielle (voir fiches ci-dessous)','Incrementer Interactions publiques dans le Tracker','Verifier les relances du jour ci-dessous'],
+    4: ['Commenter les profils restants (voir fiches ci-dessous)','Verifier : profils 17+ pts avec 1+ interaction preparees pour vendredi','Verifier les relances du jour ci-dessous'],
+    5: ['Ouvrir les fiches ci-dessous, copier le DM, envoyer','Maximum 5 DMs cette semaine','Passer le statut en DM envoye + renseigner la Relance (J+7)','Verifier les relances du jour ci-dessous'],
+    0: ['Pas de prospection le week-end'],
+    6: ['Pas de prospection le week-end']
+  };
+  return r[dayNum] || [];
+}
+
+function priorityBadge(p) {
+  if (!p) return '';
+  if (p.indexOf('max') > -1) return '<span class="badge badge-red">Priorite max</span>';
+  if (p.indexOf('haute') > -1) return '<span class="badge badge-red">Priorite haute</span>';
+  if (p.indexOf('Bonne') > -1) return '<span class="badge badge-orange">Bonne candidate</span>';
+  if (p.indexOf('surveiller') > -1) return '<span class="badge badge-yellow">A surveiller</span>';
+  return '<span class="badge badge-gray">Passer</span>';
+}
+
+function getProp(page, name) {
+  var prop = page.properties[name];
+  if (!prop) return null;
+  if (prop.type === 'title') return prop.title.map(function(t){return t.plain_text;}).join('');
+  if (prop.type === 'rich_text') return prop.rich_text.map(function(t){return t.plain_text;}).join('');
+  if (prop.type === 'number') return prop.number;
+  if (prop.type === 'select') return prop.select ? prop.select.name : null;
+  if (prop.type === 'url') return prop.url;
+  if (prop.type === 'date') return prop.date ? prop.date.start : null;
+  if (prop.type === 'checkbox') return prop.checkbox;
+  return null;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+var dmTexts = {};
+
+function profileCard(page, showDM, showNotes) {
+  var nom = getProp(page, 'Nom') || '-';
+  var priorite = getProp(page, 'Priorite') || getProp(page, 'Priorit\u00e9') || '';
+  var score = getProp(page, 'Score');
+  var url = getProp(page, 'URL LinkedIn');
+  var notes = getProp(page, 'Notes') || '';
+  var dm = getProp(page, 'DM r\u00e9dig\u00e9') || '';
+  var id = 'dm-' + page.id.replace(/-/g,'');
+  if (dm) dmTexts[id] = dm;
+
+  var html = '<div class="profile-card">';
+  html += '<div class="profile-top"><div>';
+  html += '<div class="profile-name">'+escapeHtml(nom)+'</div>';
+  html += '<div class="profile-meta">'+priorityBadge(priorite);
+  if (score !== null) html += '<span class="score-badge">'+score+' pts</span>';
+  html += '</div></div>';
+  if (url) {
+    html += '<a href="'+escapeHtml(url)+'" target="_blank" class="btn-linkedin">';
+    html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/></svg>';
+    html += 'Ouvrir</a>';
+  }
+  html += '</div>';
+  if (showNotes && notes) html += '<div class="profile-notes">'+escapeHtml(notes)+'</div>';
+  if (showDM && dm) {
+    html += '<div class="dm-block">';
+    html += '<div class="dm-label">DM a envoyer</div>';
+    html += '<button class="btn-copy" id="'+id+'" onclick="copyDM(\''+id+'\')">Copier</button>';
+    html += escapeHtml(dm);
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function copyDM(id) {
+  var text = dmTexts[id] || '';
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById(id);
+    if (btn) { btn.textContent = 'Copie !'; btn.classList.add('copied'); }
+    setTimeout(function() {
+      var b = document.getElementById(id);
+      if (b) { b.textContent = 'Copier'; b.classList.remove('copied'); }
+    }, 2000);
+  });
+}
+
+function buildSection(icon, title, color, cards, showDM) {
+  if (!cards || cards.length === 0) return '';
+  var html = '<div class="section">';
+  html += '<div class="section-header">';
+  html += '<div class="section-icon" style="background:'+color+'20;color:'+color+'">'+icon+'</div>';
+  html += '<span class="section-title">'+title+'</span>';
+  html += '<span class="section-count">'+cards.length+' profil'+(cards.length>1?'s':'')+'</span>';
+  html += '</div>';
+  for (var i=0; i<cards.length; i++) html += profileCard(cards[i], showDM, true);
+  html += '</div>';
+  return html;
+}
+
+async function notionQuery(token, filter) {
+  var url = PROXY + encodeURIComponent('https://api.notion.com/v1/databases/'+DB_ID+'/query');
+  var res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer '+token,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ filter: filter, page_size: 50 })
+  });
+  if (!res.ok) {
+    var err = await res.json();
+    throw new Error(err.message || 'Erreur API Notion');
+  }
+  return res.json();
+}
+
+async function loadData() {
+  var token = sessionStorage.getItem('notion_token');
+  if (!token) return;
+  var today = todayStr();
+  var content = document.getElementById('content');
+  content.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Chargement...</p></div>';
+  dmTexts = {};
+
+  try {
+    function makeFilter(prop) {
+      return { property: prop, date: { equals: today } };
+    }
+    var results = await Promise.all([
+      notionQuery(token, makeFilter('Commenter le')),
+      notionQuery(token, makeFilter('2e commentaire')),
+      notionQuery(token, makeFilter('\u00c0 envoyer le')),
+      notionQuery(token, makeFilter('Relance'))
+    ]);
+
+    var commenter = results[0].results;
+    var commenter2 = results[1].results;
+    var dms = results[2].results;
+    var relances = results[3].results;
+    var total = commenter.length + commenter2.length + dms.length + relances.length;
+
+    var d = new Date();
+    var dayNum = d.getDay();
+    var routine = getRoutine(dayNum);
+
+    var html = '<div class="routine-block section"><div class="routine-day">Ce que tu fais aujourd\'hui &mdash; '+DAYS[dayNum]+'</div><div class="routine-items">';
+    for (var i=0; i<routine.length; i++) html += '<div class="routine-item">'+routine[i]+'</div>';
+    html += '</div></div>';
+
+    if (total === 0) {
+      html += '<div class="all-done section"><div class="icon">✨</div><h2>Rien de prevu aujourd\'hui</h2><p>Pas de commentaire, DM ou relance planifie. Profite pour sourcer de nouveaux profils.</p></div>';
+    } else {
+      html += buildSection('💬', 'Commenter — 1er passage', '#2D6A4F', commenter, false);
+      html += buildSection('💬', 'Commenter — 2e passage', '#1B4F8A', commenter2, false);
+      html += buildSection('📩', 'DMs a envoyer', '#C4421A', dms, true);
+      html += buildSection('🔔', 'Relances a envoyer', '#B8860B', relances, true);
+    }
+
+    content.innerHTML = html;
+  } catch(err) {
+    content.innerHTML = '<div class="error-block"><strong>Erreur de connexion Notion</strong><br>'+err.message+'<br><br>Verifie que ton token est valide et que integration est connectee au tracker.</div>';
+  }
+}
+
+function connect() {
+  var token = document.getElementById('token-input').value.trim();
+  if (!token) { alert('Entre ton token Notion'); return; }
+  sessionStorage.setItem('notion_token', token);
+  document.getElementById('token-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  var d = new Date();
+  document.getElementById('date-label').textContent = formatDate(d);
+  document.getElementById('day-badge').textContent = DAYS[d.getDay()];
+  loadData();
+}
+
+function logout() {
+  sessionStorage.removeItem('notion_token');
+  document.getElementById('token-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('token-input').value = '';
+}
+
+document.getElementById('token-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') connect();
+});
+
+if (sessionStorage.getItem('notion_token')) {
+  document.getElementById('token-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  var d = new Date();
+  document.getElementById('date-label').textContent = formatDate(d);
+  document.getElementById('day-badge').textContent = DAYS[d.getDay()];
+  loadData();
+}
+</script>
+</body>
+</html>
